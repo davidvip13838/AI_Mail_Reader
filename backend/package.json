@@ -1,0 +1,28 @@
+{
+  "name": "ai-mail-reader-backend",
+  "version": "1.0.0",
+  "description": "Backend for AI Mail Reader - Gmail summarization with audio generation",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["gmail", "chatgpt", "elevenlabs", "email-summarization"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "googleapis": "^126.0.1",
+    "openai": "^4.20.1",
+    "axios": "^1.6.2",
+    "multer": "^1.4.5-lts.1",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
+
