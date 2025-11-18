@@ -35,7 +35,7 @@ Before you begin, ensure you have:
 3. Enable the Gmail API
 4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
 5. Configure the OAuth consent screen
-6. Add authorized redirect URI: `http://localhost:3000` (or `http://localhost:5000/api/gmail/auth-callback` if you prefer backend handling)
+6. Add authorized redirect URI: `http://localhost:3000` (or `http://localhost:5001/api/gmail/auth-callback` if you prefer backend handling)
 7. Copy your Client ID and Client Secret
 
 ### 2. Backend Setup
@@ -57,10 +57,10 @@ Before you begin, ensure you have:
 
 4. Update `.env` with your credentials:
    ```env
-   PORT=5000
+   PORT=5001
    GOOGLE_CLIENT_ID=your_google_client_id_here
    GOOGLE_CLIENT_SECRET=your_google_client_secret_here
-   GOOGLE_REDIRECT_URI=http://localhost:5000/api/gmail/auth-callback
+   GOOGLE_REDIRECT_URI=http://localhost:5001/api/gmail/auth-callback
    OPENAI_API_KEY=your_openai_api_key_here
    ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
    ```
@@ -72,7 +72,7 @@ Before you begin, ensure you have:
    npm run dev
    ```
 
-The backend will run on `http://localhost:5000`
+The backend will run on `http://localhost:5001`
 
 ### 3. Frontend Setup
 
@@ -93,7 +93,7 @@ The backend will run on `http://localhost:5000`
 
 4. Update `.env` with your API URL (if different from default):
    ```env
-   REACT_APP_API_URL=http://localhost:5000/api
+   REACT_APP_API_URL=http://localhost:5001/api
    ```
 
 5. Start the frontend development server:
@@ -151,7 +151,7 @@ AI_mail_reader/
 ## Environment Variables
 
 ### Backend (.env)
-- `PORT` - Server port (default: 5000)
+- `PORT` - Server port (default: 5001)
 - `GOOGLE_CLIENT_ID` - Google OAuth2 Client ID
 - `GOOGLE_CLIENT_SECRET` - Google OAuth2 Client Secret
 - `GOOGLE_REDIRECT_URI` - OAuth redirect URI

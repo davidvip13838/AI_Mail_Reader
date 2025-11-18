@@ -38,7 +38,7 @@ npm install
 
 2. Update if needed (default should work):
    ```env
-   REACT_APP_API_URL=http://localhost:5000/api
+   REACT_APP_API_URL=http://localhost:5001/api
    ```
 
 ## Step 3: Google OAuth Setup
@@ -50,7 +50,7 @@ npm install
 5. Click **Create Credentials** → **OAuth 2.0 Client ID**
 6. Configure OAuth consent screen (if not done)
 7. Application type: **Web application**
-8. Authorized redirect URIs: `http://localhost:5000/api/gmail/auth-callback`
+8. Authorized redirect URIs: `http://localhost:5001/api/gmail/auth-callback`
 9. Copy **Client ID** and **Client Secret** to backend `.env`
 
 ## Step 4: Run the Application
