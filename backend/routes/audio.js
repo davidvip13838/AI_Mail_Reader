@@ -6,6 +6,7 @@ import { dirname, join } from 'path';
 import dotenv from 'dotenv';
 import { authenticate, optionalAuth } from '../middleware/auth.js';
 import User from '../models/User.js';
+import Audio from '../models/Audio.js';
 
 dotenv.config();
 
@@ -18,7 +19,7 @@ const audioDir = join(__dirname, '..', 'audio');
 // Generate audio from text using ElevenLabs - Requires authentication
 router.post('/generate', authenticate, async (req, res) => {
   try {
-    const { text, voiceId } = req.body;
+    const { text, voiceId, emailCount, dateFilter } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -115,9 +116,34 @@ router.post('/generate', authenticate, async (req, res) => {
     // Save audio file
     await fs.writeFile(filepath, response.data);
 
-    res.json({ 
+    // Get file size
+    const stats = await fs.stat(filepath);
+    const fileSize = stats.size;
+
+    // Create text preview (first 200 characters)
+    const textPreview = text.substring(0, 200) + (text.length > 200 ? '...' : '');
+
+    // Save audio reference to database
+    const audioRecord = new Audio({
+      userId: req.userId,
       filename,
       url: `/audio/${filename}`,
+      textPreview,
+      voiceId: selectedVoiceId,
+      fileSize,
+      emailCount: emailCount || 10,
+      dateFilter: dateFilter || 'all'
+    });
+    await audioRecord.save();
+
+    res.json({ 
+      id: audioRecord._id,
+      filename,
+      url: `/audio/${filename}`,
+      textPreview,
+      emailCount: audioRecord.emailCount,
+      dateFilter: audioRecord.dateFilter,
+      createdAt: audioRecord.createdAt,
       message: 'Audio generated successfully'
     });
   } catch (error) {
@@ -173,6 +199,62 @@ router.post('/generate', authenticate, async (req, res) => {
       error: errorMessage, 
       details: errorDetails,
       statusCode: error.response?.status
+    });
+  }
+});
+
+// Get user's audio history - Requires authentication
+router.get('/history', authenticate, async (req, res) => {
+  try {
+    const audios = await Audio.find({ userId: req.userId })
+      .sort({ createdAt: -1 })
+      .select('-__v');
+
+    res.json({ audios });
+  } catch (error) {
+    console.error('Error fetching audio history:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch audio history', 
+      details: error.message 
+    });
+  }
+});
+
+// Delete audio file - Requires authentication
+router.delete('/:audioId', authenticate, async (req, res) => {
+  try {
+    const { audioId } = req.params;
+
+    // Find the audio record
+    const audio = await Audio.findOne({ 
+      _id: audioId, 
+      userId: req.userId 
+    });
+
+    if (!audio) {
+      return res.status(404).json({ error: 'Audio file not found' });
+    }
+
+    // Delete the physical file
+    const filepath = join(audioDir, audio.filename);
+    try {
+      await fs.remove(filepath);
+    } catch (fileError) {
+      console.warn(`File ${audio.filename} not found on disk, continuing with database deletion:`, fileError.message);
+    }
+
+    // Delete the database record
+    await Audio.findByIdAndDelete(audioId);
+
+    res.json({ 
+      message: 'Audio file deleted successfully',
+      deletedId: audioId
+    });
+  } catch (error) {
+    console.error('Error deleting audio:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete audio file', 
+      details: error.message 
     });
   }
 });

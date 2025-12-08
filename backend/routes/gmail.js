@@ -125,6 +125,31 @@ router.post('/unread-emails', authenticate, async (req, res) => {
       });
     }
 
+    // Get filtering options from request body
+    const maxResults = Math.min(parseInt(req.body.maxResults) || 10, 50); // Max 50 emails
+    const dateFilter = req.body.dateFilter || 'all'; // 'today', 'last7days', 'last30days', 'all'
+
+    // Build Gmail query with date filter
+    let query = 'is:unread';
+    
+    if (dateFilter === 'today') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0].replace(/-/g, '/');
+      query += ` after:${todayStr}`;
+    } else if (dateFilter === 'last7days') {
+      const date = new Date();
+      date.setDate(date.getDate() - 7);
+      const dateStr = date.toISOString().split('T')[0].replace(/-/g, '/');
+      query += ` after:${dateStr}`;
+    } else if (dateFilter === 'last30days') {
+      const date = new Date();
+      date.setDate(date.getDate() - 30);
+      const dateStr = date.toISOString().split('T')[0].replace(/-/g, '/');
+      query += ` after:${dateStr}`;
+    }
+    // 'all' means no date filter
+
     // Use tokens from database, or fallback to request body (for backward compatibility)
     const accessToken = req.body.accessToken || user.gmailAccessToken;
     const refreshToken = req.body.refreshToken || user.gmailRefreshToken;
@@ -138,8 +163,8 @@ router.post('/unread-emails', authenticate, async (req, res) => {
     try {
       response = await gmail.users.messages.list({
         userId: 'me',
-        q: 'is:unread',
-        maxResults: 10
+        q: query,
+        maxResults: maxResults
       });
     } catch (tokenError) {
       // If access token is invalid and we have a refresh token, try to refresh
@@ -156,8 +181,8 @@ router.post('/unread-emails', authenticate, async (req, res) => {
         const refreshedGmail = google.gmail({ version: 'v1', auth: oauth2Client });
         response = await refreshedGmail.users.messages.list({
           userId: 'me',
-          q: 'is:unread',
-          maxResults: 10
+          q: query,
+          maxResults: maxResults
         });
         
         // Save new access token to database

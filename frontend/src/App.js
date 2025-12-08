@@ -27,7 +27,14 @@ function App() {
   const [summary, setSummary] = useState('');
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
+  const [audioHistory, setAudioHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Summary customization options
+  const [emailCount, setEmailCount] = useState(10);
+  const [dateFilter, setDateFilter] = useState('all');
+  const [showCustomization, setShowCustomization] = useState(false);
   
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
@@ -43,6 +50,13 @@ function App() {
       checkAuth(token);
     }
   }, []);
+
+  // Fetch audio history when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchAudioHistory();
+    }
+  }, [isAuthenticated]);
 
   // Handle Gmail OAuth callback
   useEffect(() => {
@@ -158,7 +172,14 @@ function App() {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.post(`${API_BASE_URL}/gmail/unread-emails`);
+      // Clear previous summary when fetching new emails
+      setSummary('');
+      setAudioUrl(null);
+      
+      const response = await axios.post(`${API_BASE_URL}/gmail/unread-emails`, {
+        maxResults: emailCount,
+        dateFilter: dateFilter
+      });
       
       // Update access token if it was refreshed
       if (response.data.newAccessToken) {
@@ -211,16 +232,55 @@ function App() {
       setGeneratingAudio(true);
       setError(null);
       const response = await axios.post(`${API_BASE_URL}/audio/generate`, {
-        text: summary
+        text: summary,
+        emailCount: emailCount,
+        dateFilter: dateFilter
       });
       
       const fullUrl = `${API_BASE_URL.replace('/api', '')}${response.data.url}`;
       setAudioUrl(fullUrl);
+      
+      // Refresh audio history after generating new audio
+      await fetchAudioHistory();
     } catch (error) {
       setError(error.response?.data?.error || 'Failed to generate audio');
       console.error(error);
     } finally {
       setGeneratingAudio(false);
+    }
+  };
+
+  const fetchAudioHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const response = await axios.get(`${API_BASE_URL}/audio/history`);
+      setAudioHistory(response.data.audios || []);
+    } catch (error) {
+      console.error('Error fetching audio history:', error);
+      // Don't show error for history fetch, just log it
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const deleteAudio = async (audioId) => {
+    if (!window.confirm('Are you sure you want to delete this audio file?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_BASE_URL}/audio/${audioId}`);
+      // Remove from local state
+      setAudioHistory(audioHistory.filter(audio => audio._id !== audioId));
+      
+      // If the deleted audio was the currently playing one, clear it
+      const deletedAudio = audioHistory.find(a => a._id === audioId);
+      if (deletedAudio && audioUrl && audioUrl.includes(deletedAudio.filename)) {
+        setAudioUrl(null);
+      }
+    } catch (error) {
+      setError(error.response?.data?.error || 'Failed to delete audio file');
+      console.error(error);
     }
   };
 
@@ -246,6 +306,7 @@ function App() {
       setEmails([]);
       setSummary('');
       setAudioUrl(null);
+      setAudioHistory([]);
       localStorage.removeItem('auth_token');
     }
   };
@@ -255,8 +316,11 @@ function App() {
       <div className="App">
         <div className="container">
           <header className="header">
-            <h1>📧 AI Mail Reader</h1>
-            <p className="subtitle">Summarize your Gmail and listen to it</p>
+            <h1>
+              <span className="logo-icon">📧</span>
+              AI Mail Reader
+            </h1>
+            <p className="subtitle">Transform your inbox with AI-powered summaries and audio playback</p>
           </header>
 
           {error && (
@@ -272,29 +336,29 @@ function App() {
                   className={showLogin ? 'active' : ''} 
                   onClick={() => setShowLogin(true)}
                 >
-                  Login
+                  Sign In
                 </button>
                 <button 
                   className={!showLogin ? 'active' : ''} 
                   onClick={() => setShowLogin(false)}
                 >
-                  Register
+                  Create Account
                 </button>
               </div>
 
               {showLogin ? (
                 <form onSubmit={handleLogin} className="auth-form">
-                  <h2>Login</h2>
+                  <h2>Welcome Back</h2>
                   <input
                     type="email"
-                    placeholder="Email"
+                    placeholder="Enter your email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     required
                   />
                   <input
                     type="password"
-                    placeholder="Password"
+                    placeholder="Enter your password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     required
@@ -304,28 +368,35 @@ function App() {
                     className="btn btn-primary" 
                     disabled={loading}
                   >
-                    {loading ? 'Logging in...' : 'Login'}
+                    {loading ? (
+                      <>
+                        <span className="loading-spinner"></span>
+                        Signing in...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
                   </button>
                 </form>
               ) : (
                 <form onSubmit={handleRegister} className="auth-form">
-                  <h2>Register</h2>
+                  <h2>Get Started</h2>
                   <input
                     type="text"
-                    placeholder="Name (optional)"
+                    placeholder="Full name (optional)"
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
                   />
                   <input
                     type="email"
-                    placeholder="Email"
+                    placeholder="Enter your email"
                     value={registerEmail}
                     onChange={(e) => setRegisterEmail(e.target.value)}
                     required
                   />
                   <input
                     type="password"
-                    placeholder="Password (min 6 characters)"
+                    placeholder="Create a password (min 6 characters)"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
                     required
@@ -336,7 +407,14 @@ function App() {
                     className="btn btn-primary" 
                     disabled={loading}
                   >
-                    {loading ? 'Registering...' : 'Register'}
+                    {loading ? (
+                      <>
+                        <span className="loading-spinner"></span>
+                        Creating account...
+                      </>
+                    ) : (
+                      'Create Account'
+                    )}
                   </button>
                 </form>
               )}
@@ -351,8 +429,11 @@ function App() {
     <div className="App">
       <div className="container">
         <header className="header">
-          <h1>📧 AI Mail Reader</h1>
-          <p className="subtitle">Welcome, {user?.name || user?.email}!</p>
+          <h1>
+            <span className="logo-icon">📧</span>
+            AI Mail Reader
+          </h1>
+          <p className="subtitle">Welcome back, {user?.name || user?.email}!</p>
         </header>
 
         {error && (
@@ -364,7 +445,7 @@ function App() {
         <div className="main-content">
           <div className="card">
             <div className="card-header">
-              <h2>Your Unread Emails</h2>
+              <h2>Your Inbox</h2>
               <div className="header-actions">
                 {!user?.hasGmailAuth && (
                   <button 
@@ -376,34 +457,103 @@ function App() {
                   </button>
                 )}
                 <button className="btn btn-secondary" onClick={logout}>
-                  Logout
+                  Sign Out
                 </button>
               </div>
             </div>
 
             {!user?.hasGmailAuth ? (
               <div className="info-message">
-                <p>Please connect your Gmail account to start fetching emails.</p>
+                <p>🔗 Connect your Gmail account to start fetching and summarizing your emails.</p>
               </div>
             ) : (
               <>
+                {/* Summary Customization Section */}
+                <div className="customization-section">
+                  <div className="customization-header">
+                    <h3>⚙️ Summary Settings</h3>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => setShowCustomization(!showCustomization)}
+                    >
+                      {showCustomization ? '▼ Hide' : '▶ Show'} Options
+                    </button>
+                  </div>
+
+                  {showCustomization && (
+                    <div className="customization-options">
+                      <div className="customization-option">
+                        <label htmlFor="emailCount">
+                          Number of Emails: <strong>{emailCount}</strong>
+                        </label>
+                        <input
+                          type="range"
+                          id="emailCount"
+                          min="1"
+                          max="50"
+                          value={emailCount}
+                          onChange={(e) => setEmailCount(parseInt(e.target.value))}
+                          className="slider"
+                        />
+                        <div className="slider-labels">
+                          <span>1</span>
+                          <span>50</span>
+                        </div>
+                      </div>
+
+                      <div className="customization-option">
+                        <label htmlFor="dateFilter">Date Filter:</label>
+                        <select
+                          id="dateFilter"
+                          value={dateFilter}
+                          onChange={(e) => setDateFilter(e.target.value)}
+                          className="select-input"
+                        >
+                          <option value="all">All Unread Emails</option>
+                          <option value="today">Today Only</option>
+                          <option value="last7days">Last 7 Days</option>
+                          <option value="last30days">Last 30 Days</option>
+                        </select>
+                      </div>
+
+                      <div className="customization-info">
+                        <p>
+                          📊 You'll fetch up to <strong>{emailCount}</strong> email{emailCount !== 1 ? 's' : ''} 
+                          {dateFilter !== 'all' && (
+                            <> from the <strong>{dateFilter === 'today' ? 'today' : dateFilter === 'last7days' ? 'last 7 days' : 'last 30 days'}</strong></>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="actions">
                   <button 
                     className="btn btn-primary" 
                     onClick={fetchUnreadEmails}
                     disabled={loading}
                   >
-                    {loading ? 'Loading...' : '📥 Fetch Unread Emails'}
+                    {loading ? (
+                      <>
+                        <span className="loading-spinner"></span>
+                        Fetching emails...
+                      </>
+                    ) : (
+                      <>
+                        📥 Fetch Unread Emails
+                      </>
+                    )}
                   </button>
                 </div>
 
                 {emails.length > 0 && (
                   <div className="emails-list">
-                    <h3>Found {emails.length} unread email(s)</h3>
+                    <h3>📬 Found {emails.length} unread email{emails.length !== 1 ? 's' : ''}</h3>
                     {emails.map((email, index) => (
                       <div key={email.id} className="email-item">
                         <div className="email-header">
-                          <strong>{email.subject}</strong>
+                          <strong>{email.subject || '(No Subject)'}</strong>
                           <span className="email-from">{email.from}</span>
                         </div>
                         <p className="email-snippet">{email.snippet}</p>
@@ -420,14 +570,23 @@ function App() {
                       onClick={generateSummary}
                       disabled={loading}
                     >
-                      {loading ? 'Generating...' : '🤖 Generate Summary'}
+                      {loading ? (
+                        <>
+                          <span className="loading-spinner"></span>
+                          Generating summary...
+                        </>
+                      ) : (
+                        <>
+                          🤖 Generate AI Summary
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
 
                 {summary && (
                   <div className="summary-section">
-                    <h3>Summary</h3>
+                    <h3>✨ AI Summary</h3>
                     <div className="summary-text">{summary}</div>
                     
                     <div className="actions">
@@ -436,7 +595,16 @@ function App() {
                         onClick={generateAudio}
                         disabled={generatingAudio}
                       >
-                        {generatingAudio ? 'Generating Audio...' : '🎵 Generate Audio'}
+                        {generatingAudio ? (
+                          <>
+                            <span className="loading-spinner"></span>
+                            Generating audio...
+                          </>
+                        ) : (
+                          <>
+                            🎵 Generate Audio
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -444,9 +612,9 @@ function App() {
 
                 {audioUrl && (
                   <div className="audio-section">
-                    <h3>Audio Ready!</h3>
+                    <h3>🎧 Audio Ready</h3>
                     <div className="audio-player">
-                      <audio controls src={audioUrl} style={{ width: '100%', marginBottom: '1rem' }}>
+                      <audio controls src={audioUrl}>
                         Your browser does not support the audio element.
                       </audio>
                       <button 
@@ -458,6 +626,113 @@ function App() {
                     </div>
                   </div>
                 )}
+
+                {/* Audio History Section */}
+                <div className="audio-history-section">
+                  <div className="section-header">
+                    <h3>📚 Audio History</h3>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={fetchAudioHistory}
+                      disabled={loadingHistory}
+                    >
+                      {loadingHistory ? (
+                        <>
+                          <span className="loading-spinner"></span>
+                          Loading...
+                        </>
+                      ) : (
+                        '🔄 Refresh'
+                      )}
+                    </button>
+                  </div>
+
+                  {loadingHistory && audioHistory.length === 0 ? (
+                    <div className="info-message">
+                      <p>Loading your audio history...</p>
+                    </div>
+                  ) : audioHistory.length === 0 ? (
+                    <div className="info-message">
+                      <p>No audio files yet. Generate your first audio summary above!</p>
+                    </div>
+                  ) : (
+                    <div className="audio-history-list">
+                      {audioHistory.map((audio) => {
+                        const fullUrl = `${API_BASE_URL.replace('/api', '')}${audio.url}`;
+                        const isCurrentlyPlaying = audioUrl && audioUrl.includes(audio.filename);
+                        
+                        // Format date
+                        const date = new Date(audio.createdAt);
+                        const formattedDate = date.toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+                        
+                        // Format date filter label
+                        const getDateFilterLabel = (filter) => {
+                          switch(filter) {
+                            case 'today': return 'Today';
+                            case 'last7days': return 'Last 7 Days';
+                            case 'last30days': return 'Last 30 Days';
+                            default: return 'All Emails';
+                          }
+                        };
+                        
+                        return (
+                          <div key={audio._id} className={`audio-history-item ${isCurrentlyPlaying ? 'active' : ''}`}>
+                            <div className="audio-history-content">
+                              <div className="audio-history-header">
+                                <div className="audio-history-info">
+                                  <strong className="audio-history-title">
+                                    {formattedDate}
+                                  </strong>
+                                  <div className="audio-history-options">
+                                    <span className="option-badge">
+                                      📧 {audio.emailCount || 10} email{audio.emailCount !== 1 ? 's' : ''}
+                                    </span>
+                                    <span className="option-badge">
+                                      📅 {getDateFilterLabel(audio.dateFilter || 'all')}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  className="btn-delete"
+                                  onClick={() => deleteAudio(audio._id)}
+                                  title="Delete audio"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                              <div className="audio-history-player">
+                                <audio controls src={fullUrl} style={{ width: '100%' }}>
+                                  Your browser does not support the audio element.
+                                </audio>
+                              </div>
+                              <div className="audio-history-actions">
+                                <button
+                                  className="btn btn-secondary"
+                                  onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.href = fullUrl;
+                                    link.download = audio.filename;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                  }}
+                                >
+                                  ⬇️ Download
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
