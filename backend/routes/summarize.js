@@ -1,6 +1,7 @@
 import express from 'express';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
+import { authenticate } from '../middleware/auth.js';
 
 dotenv.config();
 
@@ -10,8 +11,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Summarize emails using ChatGPT
-router.post('/summarize', async (req, res) => {
+// Summarize emails using ChatGPT - Requires authentication
+router.post('/summarize', authenticate, async (req, res) => {
   try {
     const { emails } = req.body;
 

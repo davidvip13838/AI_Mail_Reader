@@ -20,6 +20,7 @@ npm test -- gmail.test.js
 npm test -- openai.test.js
 npm test -- elevenlabs.test.js
 npm test -- integration.test.js
+npm test -- mongodb.test.js
 ```
 
 ## Test Files
@@ -49,7 +50,30 @@ Tests full workflow integration:
 - ✅ API key formats
 - ✅ Workflow simulation
 
+### `mongodb.test.js`
+Tests MongoDB connection and database operations:
+- ✅ MongoDB connection status
+- ✅ Database name verification
+- ✅ Create, Read, Update operations
+- ✅ User model schema validation
+- ✅ Password hashing verification
+- ✅ Unique email constraint
+- ✅ Required fields validation
+
 ## Setup for Full Testing
+
+### MongoDB Connection Test
+
+The MongoDB test requires a MongoDB instance to be running. Set this in your `.env` file:
+
+```env
+# MongoDB connection string
+MONGODB_URI=mongodb://localhost:27017/ai-mail-reader-test
+```
+
+**Note:** The test uses a separate test database (`ai-mail-reader-test`) to avoid interfering with your main database. All test data is automatically cleaned up after tests.
+
+### Gmail Connection Test
 
 To run all tests including the Gmail connection test, add this to your `.env` file:
 
@@ -68,6 +92,7 @@ GMAIL_ACCESS_TOKEN=your_access_token_here
 When all APIs are correctly configured, you should see:
 
 ```
+✅ MongoDB: Connected successfully
 ✅ Gmail API: Environment variables configured
 ✅ OpenAI API: Connected successfully
 ✅ ElevenLabs API: Connected successfully
@@ -85,6 +110,12 @@ When all APIs are correctly configured, you should see:
 - Check your internet connection
 - Verify API endpoints are accessible
 - Some tests have 30-second timeouts for API calls
+
+### MongoDB connection failed
+- Make sure MongoDB is running locally, or
+- Update `MONGODB_URI` in `.env` to point to your MongoDB Atlas cluster
+- Check that the connection string format is correct
+- Verify network connectivity to MongoDB server
 
 ### Gmail test skipped
 - This is normal - the Gmail test requires an active access token

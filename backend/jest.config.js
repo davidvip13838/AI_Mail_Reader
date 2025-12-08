@@ -1,7 +1,6 @@
 export default {
   testEnvironment: 'node',
   transform: {},
-  extensionsToTreatAsEsm: ['.js'],
   globals: {
     'ts-jest': {
       useESM: true
@@ -13,6 +12,8 @@ export default {
   testMatch: ['**/tests/**/*.test.js'],
   collectCoverageFrom: [
     'routes/**/*.js',
+    'models/**/*.js',
+    'middleware/**/*.js',
     'server.js',
     '!**/node_modules/**'
   ],

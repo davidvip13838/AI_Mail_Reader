@@ -161,14 +161,52 @@ async function testElevenLabs() {
     log(`   ✅ Text-to-speech working! Audio size: ${ttsResponse.data.byteLength} bytes`, 'green');
     return true;
   } catch (error) {
+    // Parse error response - might be Buffer, string, or object
+    let errorData = error.response?.data;
+    if (Buffer.isBuffer(errorData)) {
+      try {
+        errorData = JSON.parse(errorData.toString());
+      } catch (e) {
+        errorData = { message: errorData.toString() };
+      }
+    }
+    
     if (error.response?.status === 401) {
-      log(`   ❌ Invalid API key`, 'red');
+      const errorDetail = errorData?.detail;
+      
+      if (errorDetail?.status === 'missing_permissions') {
+        log(`   ❌ API key missing permissions`, 'red');
+        log(`   📝 Missing permission: ${errorDetail.message}`, 'yellow');
+        log(`   💡 Solution:`, 'yellow');
+        log(`      - Go to https://elevenlabs.io/app/settings/api-keys`, 'yellow');
+        log(`      - Create a new API key or edit your existing one`, 'yellow');
+        log(`      - Enable "voices_read" permission (and "text_to_speech" for TTS)`, 'yellow');
+        log(`      - Update ELEVENLABS_API_KEY in your .env file`, 'yellow');
+      } else if (errorDetail?.status === 'detected_unusual_activity') {
+        log(`   ❌ Unusual activity detected - Free Tier disabled`, 'red');
+        log(`   📝 ${errorDetail.message}`, 'yellow');
+        log(`   💡 Solutions:`, 'yellow');
+        log(`      - If using VPN/Proxy: Disable it or upgrade to Paid Plan`, 'yellow');
+        log(`      - Upgrade to a Paid Plan at https://elevenlabs.io/pricing`, 'yellow');
+        log(`      - Wait and try again later (Free Tier may be temporarily disabled)`, 'yellow');
+        log(`      - Contact ElevenLabs support if you believe this is an error`, 'yellow');
+      } else {
+        log(`   ❌ Invalid API key`, 'red');
+        log(`   📝 Response: ${JSON.stringify(errorData || {})}`, 'yellow');
+        log(`   💡 Tips:`, 'yellow');
+        log(`      - Check your API key at https://elevenlabs.io/app/settings/api-keys`, 'yellow');
+        log(`      - Ensure the key doesn't have extra spaces or quotes`, 'yellow');
+        log(`      - Make sure the key hasn't been revoked or expired`, 'yellow');
+      }
     } else if (error.response?.status === 402) {
       log(`   ❌ Insufficient credits`, 'red');
     } else if (error.response?.status === 429) {
       log(`   ❌ Rate limit exceeded`, 'red');
     } else {
-      log(`   ❌ ElevenLabs API error: ${error.response?.data?.message || error.message}`, 'red');
+      log(`   ❌ ElevenLabs API error: ${errorData?.message || error.message}`, 'red');
+      if (errorData) {
+        log(`   📝 Full error: ${JSON.stringify(errorData)}`, 'yellow');
+      }
     }
     return false;
   }
