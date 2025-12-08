@@ -4,7 +4,9 @@ A MERN stack application that reads your Gmail unread emails, summarizes them us
 
 ## Features
 
+- 👤 User authentication with MongoDB (register/login)
 - 🔐 Google OAuth2 authentication for Gmail access
+- 💾 Secure storage of Gmail tokens in database
 - 📧 Fetch and display unread emails from Gmail
 - 🤖 AI-powered email summarization using OpenAI GPT-4
 - 🎵 Text-to-speech conversion using ElevenLabs
@@ -15,6 +17,8 @@ A MERN stack application that reads your Gmail unread emails, summarizes them us
 
 - **Frontend**: React
 - **Backend**: Node.js, Express
+- **Database**: MongoDB (with Mongoose)
+- **Authentication**: JWT (JSON Web Tokens)
 - **APIs**: Gmail API, OpenAI API, ElevenLabs API
 
 ## Prerequisites
@@ -22,9 +26,10 @@ A MERN stack application that reads your Gmail unread emails, summarizes them us
 Before you begin, ensure you have:
 
 1. Node.js (v14 or higher) and npm installed
-2. A Google Cloud Project with Gmail API enabled
-3. An OpenAI API key
-4. An ElevenLabs API key
+2. MongoDB installed and running (or MongoDB Atlas account)
+3. A Google Cloud Project with Gmail API enabled
+4. An OpenAI API key
+5. An ElevenLabs API key
 
 ## Setup Instructions
 
@@ -58,12 +63,18 @@ Before you begin, ensure you have:
 4. Update `.env` with your credentials:
    ```env
    PORT=5001
+   MONGODB_URI=mongodb://localhost:27017/ai-mail-reader
+   JWT_SECRET=your-secret-key-change-in-production
+   JWT_EXPIRES_IN=7d
    GOOGLE_CLIENT_ID=your_google_client_id_here
    GOOGLE_CLIENT_SECRET=your_google_client_secret_here
    GOOGLE_REDIRECT_URI=http://localhost:5001/api/gmail/auth-callback
    OPENAI_API_KEY=your_openai_api_key_here
    ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+   FRONTEND_URL=http://localhost:3000
    ```
+
+   **Note**: For MongoDB Atlas, use: `mongodb+srv://username:password@cluster.mongodb.net/ai-mail-reader`
 
 5. Start the backend server:
    ```bash
@@ -106,18 +117,24 @@ The frontend will run on `http://localhost:3000`
 ## Usage
 
 1. Open your browser and navigate to `http://localhost:3000`
-2. Click "Connect with Google" to authenticate with your Gmail account
-3. Click "Fetch Unread Emails" to retrieve your unread emails
-4. Click "Generate Summary" to create an AI summary of your emails
-5. Click "Generate Audio" to convert the summary to speech
-6. Click "Download Audio File" to save the MP3 file to your device
+2. **Register or Login**: Create a new account or login with existing credentials
+3. **Connect Gmail**: Click "Connect Gmail" to authenticate with your Gmail account
+4. **Fetch Emails**: Click "Fetch Unread Emails" to retrieve your unread emails
+5. **Generate Summary**: Click "Generate Summary" to create an AI summary of your emails
+6. **Generate Audio**: Click "Generate Audio" to convert the summary to speech
+7. **Download**: Click "Download Audio File" to save the MP3 file to your device
 
 ## Project Structure
 
 ```
 AI_mail_reader/
 ├── backend/
+│   ├── models/
+│   │   └── User.js       # MongoDB User model
+│   ├── middleware/
+│   │   └── auth.js       # JWT authentication middleware
 │   ├── routes/
+│   │   ├── auth.js       # User authentication routes
 │   │   ├── gmail.js      # Gmail API integration
 │   │   ├── summarize.js  # OpenAI ChatGPT integration
 │   │   └── audio.js      # ElevenLabs TTS integration
@@ -139,24 +156,45 @@ AI_mail_reader/
 
 ### Backend API
 
-- `GET /api/health` - Health check
+#### Authentication (Public)
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - Login user
+
+#### Authentication (Protected - requires JWT token)
+- `GET /api/auth/profile` - Get current user profile
+- `PUT /api/auth/profile` - Update user profile
+- `PUT /api/auth/gmail-tokens` - Update Gmail OAuth tokens
+- `POST /api/auth/logout` - Logout user
+
+#### Gmail (Protected)
 - `GET /api/gmail/auth-url` - Get Google OAuth URL
-- `POST /api/gmail/auth-callback` - Exchange OAuth code for token
-- `POST /api/gmail/unread-emails` - Fetch unread emails
+- `POST /api/gmail/auth-callback` - Exchange OAuth code for token (saves to user account)
+- `POST /api/gmail/unread-emails` - Fetch unread emails (uses tokens from user account)
+
+#### Summarize (Protected)
 - `POST /api/summarize/summarize` - Generate email summary
+
+#### Audio (Protected)
 - `POST /api/audio/generate` - Generate audio from text
 - `GET /api/audio/voices` - Get available ElevenLabs voices
+
+#### Other
+- `GET /api/health` - Health check
 - `GET /audio/:filename` - Download audio file
 
 ## Environment Variables
 
 ### Backend (.env)
 - `PORT` - Server port (default: 5001)
+- `MONGODB_URI` - MongoDB connection string (default: mongodb://localhost:27017/ai-mail-reader)
+- `JWT_SECRET` - Secret key for JWT tokens (change in production!)
+- `JWT_EXPIRES_IN` - JWT token expiration (default: 7d)
 - `GOOGLE_CLIENT_ID` - Google OAuth2 Client ID
 - `GOOGLE_CLIENT_SECRET` - Google OAuth2 Client Secret
 - `GOOGLE_REDIRECT_URI` - OAuth redirect URI
 - `OPENAI_API_KEY` - OpenAI API key
 - `ELEVENLABS_API_KEY` - ElevenLabs API key
+- `FRONTEND_URL` - Frontend URL for CORS (default: http://localhost:3000)
 
 ### Frontend (.env)
 - `REACT_APP_API_URL` - Backend API URL
