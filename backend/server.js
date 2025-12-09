@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import gmailRoutes from './routes/gmail.js';
 import summarizeRoutes from './routes/summarize.js';
 import audioRoutes from './routes/audio.js';
+import analysisRoutes from './routes/analysis.js';
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/gmail', gmailRoutes);
 app.use('/api/summarize', summarizeRoutes);
 app.use('/api/audio', audioRoutes);
+app.use('/api/analysis', analysisRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

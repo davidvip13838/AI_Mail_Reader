@@ -36,6 +36,11 @@ function App() {
   const [dateFilter, setDateFilter] = useState('all');
   const [showCustomization, setShowCustomization] = useState(false);
   
+  // User analysis state
+  const [userAnalysis, setUserAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -55,6 +60,7 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchAudioHistory();
+      fetchUserAnalysis();
     }
   }, [isAuthenticated]);
 
@@ -284,6 +290,59 @@ function App() {
     }
   };
 
+  const analyzeUser = async () => {
+    if (emails.length === 0) {
+      setError('Please fetch emails first');
+      return;
+    }
+
+    try {
+      setAnalyzing(true);
+      setError(null);
+      const response = await axios.post(`${API_BASE_URL}/analysis/analyze`, {
+        emails
+      });
+      setUserAnalysis(response.data.analysis);
+      setShowAnalysis(true);
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || error.response?.data?.details || 'Failed to analyze emails';
+      setError(errorMessage);
+      console.error('Analysis error:', error);
+      if (error.response?.data?.details) {
+        console.error('Error details:', error.response.data.details);
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const fetchUserAnalysis = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/analysis/profile`);
+      if (response.data.analysis) {
+        setUserAnalysis(response.data.analysis);
+      }
+    } catch (error) {
+      console.error('Error fetching user analysis:', error);
+      // Don't show error, just log it
+    }
+  };
+
+  const deleteAnalysis = async () => {
+    if (!window.confirm('Are you sure you want to delete your analysis? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API_BASE_URL}/analysis/profile`);
+      setUserAnalysis(null);
+      setShowAnalysis(false);
+    } catch (error) {
+      setError(error.response?.data?.error || 'Failed to delete analysis');
+      console.error(error);
+    }
+  };
+
   const downloadAudio = () => {
     if (audioUrl) {
       const link = document.createElement('a');
@@ -307,6 +366,8 @@ function App() {
       setSummary('');
       setAudioUrl(null);
       setAudioHistory([]);
+      setUserAnalysis(null);
+      setShowAnalysis(false);
       localStorage.removeItem('auth_token');
     }
   };
@@ -567,6 +628,22 @@ function App() {
                   <div className="actions">
                     <button 
                       className="btn btn-primary" 
+                      onClick={analyzeUser}
+                      disabled={analyzing || loading}
+                    >
+                      {analyzing ? (
+                        <>
+                          <span className="loading-spinner"></span>
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          🔍 Analyze My Profile
+                        </>
+                      )}
+                    </button>
+                    <button 
+                      className="btn btn-primary" 
                       onClick={generateSummary}
                       disabled={loading}
                     >
@@ -581,6 +658,167 @@ function App() {
                         </>
                       )}
                     </button>
+                  </div>
+                )}
+
+                {/* User Analysis Section */}
+                {(userAnalysis || showAnalysis) && (
+                  <div className="analysis-section">
+                    <div className="section-header">
+                      <h3>👤 Your Profile Analysis</h3>
+                      <div className="header-actions">
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => setShowAnalysis(!showAnalysis)}
+                        >
+                          {showAnalysis ? '▼ Hide' : '▶ Show'} Analysis
+                        </button>
+                        <button
+                          className="btn-delete"
+                          onClick={deleteAnalysis}
+                          title="Delete analysis"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+
+                    {showAnalysis && userAnalysis && (
+                      <div className="analysis-content">
+                        {userAnalysis.insights && (
+                          <div className="analysis-insights">
+                            <h4>💡 Key Insights</h4>
+                            <p>{userAnalysis.insights}</p>
+                          </div>
+                        )}
+
+                        <div className="analysis-grid">
+                          {(userAnalysis.interests && userAnalysis.interests.length > 0) && (
+                            <div className="analysis-card">
+                              <h4>🎯 Interests</h4>
+                              <div className="tag-list">
+                                {userAnalysis.interests.map((interest, idx) => (
+                                  <span key={idx} className="tag">{interest}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {(userAnalysis.hobbies && userAnalysis.hobbies.length > 0) && (
+                            <div className="analysis-card">
+                              <h4>🎨 Hobbies</h4>
+                              <div className="tag-list">
+                                {userAnalysis.hobbies.map((hobby, idx) => (
+                                  <span key={idx} className="tag">{hobby}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {userAnalysis.school && (
+                            <div className="analysis-card">
+                              <h4>🏫 School</h4>
+                              <p>{userAnalysis.school}</p>
+                            </div>
+                          )}
+
+                          {userAnalysis.university && (
+                            <div className="analysis-card">
+                              <h4>🎓 University</h4>
+                              <p>{userAnalysis.university}</p>
+                            </div>
+                          )}
+
+                          {userAnalysis.company && (
+                            <div className="analysis-card">
+                              <h4>💼 Company</h4>
+                              <p>{userAnalysis.company}</p>
+                              {userAnalysis.jobTitle && (
+                                <p className="sub-text">{userAnalysis.jobTitle}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {userAnalysis.supervisor && userAnalysis.supervisor.name && (
+                            <div className="analysis-card">
+                              <h4>👔 Supervisor</h4>
+                              <p>{userAnalysis.supervisor.name}</p>
+                              {userAnalysis.supervisor.email && (
+                                <p className="sub-text">{userAnalysis.supervisor.email}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {userAnalysis.bestFriend && userAnalysis.bestFriend.name && (
+                            <div className="analysis-card">
+                              <h4>👫 Best Friend</h4>
+                              <p>{userAnalysis.bestFriend.name}</p>
+                              {userAnalysis.bestFriend.email && (
+                                <p className="sub-text">{userAnalysis.bestFriend.email}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {userAnalysis.location && (userAnalysis.location.city || userAnalysis.location.country) && (
+                            <div className="analysis-card">
+                              <h4>📍 Location</h4>
+                              <p>
+                                {[userAnalysis.location.city, userAnalysis.location.state, userAnalysis.location.country]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </p>
+                            </div>
+                          )}
+
+                          {userAnalysis.communicationStyle && (
+                            <div className="analysis-card">
+                              <h4>💬 Communication Style</h4>
+                              <p>{userAnalysis.communicationStyle}</p>
+                            </div>
+                          )}
+
+                          {(userAnalysis.closeContacts && userAnalysis.closeContacts.length > 0) && (
+                            <div className="analysis-card full-width">
+                              <h4>📇 Close Contacts</h4>
+                              <div className="contacts-list">
+                                {userAnalysis.closeContacts.map((contact, idx) => (
+                                  <div key={idx} className="contact-item">
+                                    <strong>{contact.name}</strong>
+                                    {contact.email && <span className="sub-text">{contact.email}</span>}
+                                    {contact.relationship && (
+                                      <span className="relationship-badge">{contact.relationship}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {(userAnalysis.frequentTopics && userAnalysis.frequentTopics.length > 0) && (
+                            <div className="analysis-card full-width">
+                              <h4>📊 Frequent Topics</h4>
+                              <div className="topics-list">
+                                {userAnalysis.frequentTopics.map((topic, idx) => (
+                                  <div key={idx} className="topic-item">
+                                    <span className="topic-name">{topic.topic}</span>
+                                    <span className="topic-frequency">({topic.frequency}x)</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {userAnalysis.lastAnalyzed && (
+                          <div className="analysis-footer">
+                            <small>
+                              Last analyzed: {new Date(userAnalysis.lastAnalyzed).toLocaleString()} 
+                              ({userAnalysis.analyzedEmailCount || 0} emails)
+                            </small>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
