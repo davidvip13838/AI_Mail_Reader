@@ -4,8 +4,7 @@
   "description": "AI Mail Reader - Gmail summarization with audio generation",
   "main": "backend/server.js",
   "scripts": {
-    "start": "cd backend && npm start",
-    "install": "cd backend && npm install --production && cd ../frontend && npm install && npm run build"
+    "start": "cd backend && npm start"
   },
   "engines": {
     "node": ">=18.0.0"
