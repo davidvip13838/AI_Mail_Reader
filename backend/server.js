@@ -32,8 +32,30 @@ mongoose.connect(MONGODB_URI)
 });
 
 // Middleware
+// CORS configuration
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [FRONTEND_URL, ...(process.env.ALLOWED_ORIGINS?.split(',') || [])].filter(Boolean)
+  : [FRONTEND_URL];
+
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    // In production, allow the configured frontend URL
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else if (process.env.NODE_ENV === 'production' && FRONTEND_URL) {
+      // Allow if origin matches the base domain (for subdomains)
+      const frontendDomain = new URL(FRONTEND_URL).origin;
+      if (origin.startsWith(frontendDomain)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -58,7 +80,25 @@ app.get('/api/health', (req, res) => {
 // Serve audio files
 app.use('/audio', express.static(audioDir));
 
+// Serve static files from React app in production
+if (process.env.NODE_ENV === 'production') {
+  const frontendBuildPath = join(__dirname, '..', 'frontend', 'build');
+  app.use(express.static(frontendBuildPath));
+  
+  // Serve React app for all non-API routes
+  app.get('*', (req, res) => {
+    // Don't serve React app for API routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/audio')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    res.sendFile(join(frontendBuildPath, 'index.html'));
+  });
+}
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  if (process.env.NODE_ENV === 'production') {
+    console.log('Production mode: Serving React app from build directory');
+  }
 });
 

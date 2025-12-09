@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+// Use environment variable or default to localhost for development
+// In production (when served from same domain), use relative URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 
+  (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5001/api');
 
 // Configure axios to include auth token in requests
 axios.interceptors.request.use(
