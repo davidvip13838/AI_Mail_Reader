@@ -8,7 +8,7 @@ const Header = () => {
         <header className="header">
             <h1>
                 <span className="logo-icon">📧</span>
-                AI Mail Reader
+                Amail
             </h1>
             {user && (
                 <p className="subtitle">Welcome back, {user.name || user.email}!</p>

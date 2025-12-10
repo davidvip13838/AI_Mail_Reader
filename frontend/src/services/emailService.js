@@ -31,3 +31,15 @@ export const sendEmail = async (to, subject, body) => {
     });
     return response.data;
 };
+
+export const syncEmails = async (maxResults = 50) => {
+    const response = await api.post('/sync/sync', {
+        maxResults
+    });
+    return response.data;
+};
+
+export const fetchLocalEmails = async (page = 1, limit = 20, search = '') => {
+    const response = await api.get(`/emails?page=${page}&limit=${limit}&search=${search}`);
+    return response.data;
+};

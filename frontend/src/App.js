@@ -11,6 +11,7 @@ import EmailList from './components/dashboard/EmailList';
 import SummarySettings from './components/dashboard/SummarySettings';
 import AnalysisView from './components/analysis/AnalysisView';
 import ComposeEmail from './components/dashboard/ComposeEmail';
+import { syncEmails, fetchLocalEmails } from './services/emailService';
 
 function App() {
   const { user, isAuthenticated, loading: authLoading, setError: setGlobalError, error: authError } = useAuth();
@@ -39,6 +40,10 @@ function App() {
 
   // Compose State
   const [showCompose, setShowCompose] = useState(false);
+
+  // Archive State
+  const [viewMode, setViewMode] = useState('remote'); // 'remote' or 'local'
+  const [syncing, setSyncing] = useState(false);
 
   // Sync auth error to local error
   useEffect(() => {
@@ -114,6 +119,7 @@ function App() {
 
       const data = await services.fetchUnreadEmails(emailCount, dateFilter);
       setEmails(data.emails);
+      setViewMode('remote');
     } catch (err) {
       if (err.response?.status === 401) {
         setError('Please connect your Gmail account first');
@@ -176,6 +182,35 @@ function App() {
       setError(err.response?.data?.error || 'Failed to analyze emails');
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const syncMessages = async () => {
+    try {
+      setSyncing(true);
+      setError(null);
+      const data = await syncEmails();
+      alert(`Synced ${data.stats.added} new emails!`);
+      // Optionally switch to local view
+      loadLocalEmails();
+    } catch (err) {
+      setError('Failed to sync emails');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const loadLocalEmails = async () => {
+    try {
+      setLoading(true);
+      // fetchLocalEmails(page, limit, search) - defaults for now
+      const data = await fetchLocalEmails();
+      setEmails(data.emails);
+      setViewMode('local');
+    } catch (err) {
+      setError('Failed to load archived emails');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -259,9 +294,29 @@ function App() {
                 />
 
                 <div className="actions">
-                  <button className="btn btn-primary" onClick={fetchUnreadEmails} disabled={loading}>
-                    {loading ? 'Fetching...' : '📥 Fetch Unread Emails'}
-                  </button>
+                  <div className="view-toggles">
+                    <button
+                      className={`btn ${viewMode === 'remote' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={fetchUnreadEmails}
+                      disabled={loading}
+                    >
+                      {loading && viewMode === 'remote' ? 'Loading...' : '📥 Unread (Gmail)'}
+                    </button>
+                    <button
+                      className={`btn ${viewMode === 'local' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={loadLocalEmails}
+                      disabled={loading}
+                    >
+                      {loading && viewMode === 'local' ? 'Loading...' : '🗄️ My Archive (Local)'}
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={syncMessages}
+                      disabled={syncing}
+                    >
+                      {syncing ? '🔄 Syncing...' : '🔄 Sync Now'}
+                    </button>
+                  </div>
                 </div>
 
                 <EmailList emails={emails} />

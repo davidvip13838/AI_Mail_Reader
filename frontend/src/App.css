@@ -482,6 +482,18 @@ audio {
   flex-wrap: wrap;
 }
 
+.view-toggles {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.view-toggles .btn {
+  font-size: 0.9rem;
+}
+
 /* Loading Spinner */
 .loading-spinner {
   width: 16px;

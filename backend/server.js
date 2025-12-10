@@ -11,6 +11,8 @@ import summarizeRoutes from './routes/summarize.js';
 import audioRoutes from './routes/audio.js';
 import analysisRoutes from './routes/analysis.js';
 import emailRoutes from './routes/email.js';
+import syncRoutes from './routes/sync.js';
+import emailsRoutes from './routes/emails.js';
 
 dotenv.config();
 
@@ -73,6 +75,8 @@ app.use('/api/summarize', summarizeRoutes);
 app.use('/api/audio', audioRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/sync', syncRoutes);
+app.use('/api/emails', emailsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

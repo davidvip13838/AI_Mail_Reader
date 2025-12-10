@@ -1,4 +1,4 @@
-# AI Mail Reader
+# Amail
 
 A modern MERN stack application that reads your Gmail unread emails, summarizes them using ChatGPT, and converts the summary to an audio file using ElevenLabs. Features a beautiful startup-style UI with full audio history management.
 
