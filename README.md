@@ -296,12 +296,3 @@ ISC
 
 Feel free to submit issues and enhancement requests!
 
-## 🎯 Future Enhancements
-
-- [ ] Email categorization and filtering
-- [ ] Multiple voice options per user
-- [ ] Scheduled email summaries
-- [ ] Email search functionality
-- [ ] Export summaries as PDF
-- [ ] Mobile app version
-- [ ] Multi-language support
