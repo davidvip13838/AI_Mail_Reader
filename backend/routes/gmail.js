@@ -18,7 +18,8 @@ const oauth2Client = new google.auth.OAuth2(
 // Get authorization URL
 router.get('/auth-url', (req, res) => {
   const scopes = [
-    'https://www.googleapis.com/auth/gmail.readonly'
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.compose'
   ];
 
   const authUrl = oauth2Client.generateAuthUrl({
@@ -49,7 +50,7 @@ router.post('/auth-callback', authenticate, async (req, res) => {
       gmailTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null
     });
 
-    res.json({ 
+    res.json({
       message: 'Gmail account connected successfully',
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
@@ -101,9 +102,9 @@ router.post('/refresh-token', async (req, res) => {
     });
   } catch (error) {
     console.error('Error refreshing token:', error);
-    res.status(500).json({ 
-      error: 'Failed to refresh token', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to refresh token',
+      details: error.message
     });
   }
 });
@@ -113,13 +114,13 @@ router.post('/unread-emails', authenticate, async (req, res) => {
   try {
     // Get user from database to retrieve Gmail tokens
     const user = await User.findById(req.userId);
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     if (!user.gmailAccessToken && !user.gmailRefreshToken) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Gmail account not connected',
         requiresAuth: true
       });
@@ -131,7 +132,7 @@ router.post('/unread-emails', authenticate, async (req, res) => {
 
     // Build Gmail query with date filter
     let query = 'is:unread';
-    
+
     if (dateFilter === 'today') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -172,9 +173,9 @@ router.post('/unread-emails', authenticate, async (req, res) => {
         console.log('Access token expired, refreshing...');
         oauth2Client.setCredentials({ refresh_token: refreshToken });
         const { credentials } = await oauth2Client.refreshAccessToken();
-        
+
         // Retry with new token
-        oauth2Client.setCredentials({ 
+        oauth2Client.setCredentials({
           access_token: credentials.access_token,
           refresh_token: refreshToken
         });
@@ -184,13 +185,13 @@ router.post('/unread-emails', authenticate, async (req, res) => {
           q: query,
           maxResults: maxResults
         });
-        
+
         // Save new access token to database
         await User.findByIdAndUpdate(req.userId, {
           gmailAccessToken: credentials.access_token,
           gmailTokenExpiry: credentials.expiry_date ? new Date(credentials.expiry_date) : null
         });
-        
+
         // Return new access token to frontend
         res.locals.newAccessToken = credentials.access_token;
       } else {
@@ -239,19 +240,19 @@ router.post('/unread-emails', authenticate, async (req, res) => {
     }
 
     const responseData = { emails: emailDetails };
-    
+
     // Include new access token if it was refreshed
     if (res.locals.newAccessToken) {
       responseData.newAccessToken = res.locals.newAccessToken;
     }
-    
+
     res.json(responseData);
   } catch (error) {
     console.error('Error fetching emails:', error);
-    
+
     // Provide more helpful error messages
     if (error.response?.status === 401) {
-      res.status(401).json({ 
+      res.status(401).json({
         error: 'Authentication failed. Please reconnect your Google account.',
         details: 'Your access token has expired. Please log out and sign in again.',
         requiresReauth: true

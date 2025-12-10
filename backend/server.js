@@ -10,6 +10,7 @@ import gmailRoutes from './routes/gmail.js';
 import summarizeRoutes from './routes/summarize.js';
 import audioRoutes from './routes/audio.js';
 import analysisRoutes from './routes/analysis.js';
+import emailRoutes from './routes/email.js';
 
 dotenv.config();
 
@@ -23,17 +24,17 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ai-mai
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI)
-.then(() => {
-  console.log('✅ Connected to MongoDB');
-})
-.catch((error) => {
-  console.error('❌ MongoDB connection error:', error);
-  process.exit(1);
-});
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error);
+    process.exit(1);
+  });
 
 // Middleware
 // CORS configuration
-const allowedOrigins = process.env.NODE_ENV === 'production' 
+const allowedOrigins = process.env.NODE_ENV === 'production'
   ? [FRONTEND_URL, ...(process.env.ALLOWED_ORIGINS?.split(',') || [])].filter(Boolean)
   : [FRONTEND_URL];
 
@@ -71,6 +72,7 @@ app.use('/api/gmail', gmailRoutes);
 app.use('/api/summarize', summarizeRoutes);
 app.use('/api/audio', audioRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/email', emailRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -84,7 +86,7 @@ app.use('/audio', express.static(audioDir));
 if (process.env.NODE_ENV === 'production') {
   const frontendBuildPath = join(__dirname, '..', 'frontend', 'build');
   app.use(express.static(frontendBuildPath));
-  
+
   // Serve React app for all non-API routes
   app.get('*', (req, res) => {
     // Don't serve React app for API routes
