@@ -12,6 +12,7 @@ A modern MERN stack application that reads your Gmail unread emails, summarizes 
 - 🤖 **AI Summarization** - Powered by OpenAI GPT-4
 - 🎵 **Text-to-Speech** - Convert summaries to audio using ElevenLabs
 - ⬇️ **Audio Downloads** - Download MP3 files directly
+- ✨ **Smart Compose** - Polish rough drafts into professional emails and send them via Gmail
 
 ### Advanced Features
 - 📚 **Audio History** - Track all generated audio files with metadata
@@ -57,7 +58,9 @@ Before you begin, ensure you have:
 4. Go to **APIs & Services** → **Credentials** → **Create Credentials** → **OAuth 2.0 Client ID**
 5. Configure the OAuth consent screen:
    - User Type: External (for testing) or Internal (for organization)
-   - Add scopes: `https://www.googleapis.com/auth/gmail.readonly`
+   - Add scopes: 
+     - `https://www.googleapis.com/auth/gmail.readonly`
+     - `https://www.googleapis.com/auth/gmail.compose`
 6. Add authorized redirect URI: `http://localhost:5001/api/gmail/auth-callback`
 7. Copy your **Client ID** and **Client Secret**
 
@@ -146,6 +149,11 @@ The frontend will run on `http://localhost:3000`
 7. **Generate Audio**: Click "Generate Audio" to convert the summary to speech
 8. **Download**: Click "Download Audio File" to save the MP3
 9. **Manage History**: View, play, and delete audio files from your history
+10. **Compose & Send**:
+    - Click "✨ Compose" in the header
+    - Write a rough draft (e.g., "hey boss sick today")
+    - Choose a tone and click "Polish with AI"
+    - Review the professional email and click "Send Email"
 
 ## 📁 Project Structure
 
@@ -208,6 +216,12 @@ AI_mail_reader/
 - `GET /api/audio/history` - Get user's audio history
 - `DELETE /api/audio/:audioId` - Delete audio file
 - `GET /api/audio/voices` - Get available ElevenLabs voices
+
+### Email (Protected)
+- `POST /api/email/polish` - Rewrite rough draft using AI
+  - Body: `{ draft: string, tone: 'professional'|'casual'|... }`
+- `POST /api/email/send` - Send email via Gmail
+  - Body: `{ to: string, subject: string, body: string }`
 
 ### Other
 - `GET /api/health` - Health check
